@@ -7,6 +7,7 @@ from services.s3_service import S3Service
 from services.redshift_service import RedshiftService
 from create_table import create_and_verify_table
 from contextlib import asynccontextmanager
+from services.embedding_service import EmbeddingService
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 s3_service = S3Service()
 redshift_service = RedshiftService()
+embedding_service = EmbeddingService()
 
 class WebhookPayload(BaseModel):
     event_type: str
@@ -43,6 +45,10 @@ async def webhook_endpoint(request: Request):
         # Store in S3 and Redshift
         s3_locations = await s3_service.store_transcript(payload)
         await redshift_service.store_transcript(payload, s3_locations['url'])
+        
+        # Generate embedding (but don't return it)
+        transcript_text = embedding_service.get_transcript_text(payload)
+        embedding_service.get_embedding(transcript_text)
         
         return {
             "status": "success",
