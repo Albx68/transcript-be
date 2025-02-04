@@ -6,11 +6,23 @@ from dotenv import load_dotenv
 from services.s3_service import S3Service
 from services.redshift_service import RedshiftService
 from create_table import create_and_verify_table
+from contextlib import asynccontextmanager
 
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        await create_and_verify_table()
+    except Exception as e:
+        print(f"Error during startup: {e}")
+    yield
+    # Shutdown
+    pass
+
+app = FastAPI(lifespan=lifespan)
 s3_service = S3Service()
 redshift_service = RedshiftService()
 
@@ -45,13 +57,6 @@ async def webhook_endpoint(request: Request):
 @app.get("/")
 async def root():
     return {"message": "Webhook server is running"}
-
-@app.on_event("startup")
-async def startup_event():
-    try:
-        await create_and_verify_table()
-    except Exception as e:
-        print(f"Error during startup: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 
