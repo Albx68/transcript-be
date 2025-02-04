@@ -35,7 +35,7 @@ async def store_transcript_in_s3(payload: dict):
     try:
         # Generate a unique filename using timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"transcripts/transcript_{timestamp}.json"  # Added transcripts/ prefix
+        filename = f"transcripts/transcript_{timestamp}.json"
         
         print(f"Attempting to store file: {filename}")
         print(f"Using bucket: {BUCKET_NAME}")
@@ -56,9 +56,18 @@ async def store_transcript_in_s3(payload: dict):
             print(f"S3 upload error: {str(s3_error)}")
             raise
         
-        s3_location = f"s3://{BUCKET_NAME}/{filename}"
-        print(f"File stored successfully at: {s3_location}")
-        return s3_location
+        # Get the region from environment or client
+        region = os.getenv('AWS_REGION', 'us-east-1')
+        
+        # Construct both S3 URI and HTTPS URL
+        s3_uri = f"s3://{BUCKET_NAME}/{filename}"
+        s3_url = f"https://{BUCKET_NAME}.s3.{region}.amazonaws.com/{filename}"
+        
+        print(f"File stored successfully at: {s3_url}")
+        return {
+            "uri": s3_uri,
+            "url": s3_url
+        }
         
     except Exception as e:
         print(f"Error storing in S3: {str(e)}")
@@ -78,31 +87,45 @@ async def store_transcript_in_redshift(transcript_data: dict, s3_location: str):
             port=int(os.getenv('REDSHIFT_PORT'))
         )
         
-        # Extract transcript data
         timestamp = datetime.now().isoformat()
-        transcript_text = transcript_data.get('data', {}).get('transcript', '')
-        meeting_id = transcript_data.get('data', {}).get('meeting_id', '')
+        
+        # Print the full transcript_data for debugging
+        print(f"Full transcript data: {json.dumps(transcript_data, indent=2)}")
+        
+        # Extract session_id as meeting_id
+        meeting_id = transcript_data.get('session_id', '')
+        
+        # Extract transcript text from speaker blocks
+        transcript_blocks = transcript_data.get('transcript', {}).get('speaker_blocks', [])
+        transcript_text = ' '.join(block.get('words', '') for block in transcript_blocks)
+        
+        print(f"Extracted meeting_id: {meeting_id}")
+        print(f"Extracted transcript_text length: {len(transcript_text)}")
         
         # Create cursor and execute insert
         cursor = conn.cursor()
-        cursor.execute("""
+        
+        insert_query = """
             INSERT INTO talent.meeting_transcripts (
                 meeting_id,
                 transcript_text,
                 s3_location,
                 created_at,
                 raw_data
-            ) VALUES (
-                %s, %s, %s, %s, %s
-            )
-        """, (
+            ) VALUES (%s, %s, %s, %s, %s)
+        """
+        
+        values = (
             meeting_id,
             transcript_text,
             s3_location,
             timestamp,
-            json.dumps(transcript_data)
-        ))
+            json.dumps(transcript_data)  # Convert dict to JSON string
+        )
         
+        print(f"Executing insert with values: {values}")
+        
+        cursor.execute(insert_query, values)
         conn.commit()
         cursor.close()
         conn.close()
@@ -144,12 +167,12 @@ async def webhook_endpoint(request: Request):
         # Store in S3 first
         print("Starting S3 storage process...")
         try:
-            s3_location = await store_transcript_in_s3(payload)
-            print(f"Successfully stored in S3 at: {s3_location}")
+            s3_locations = await store_transcript_in_s3(payload)
+            print(f"Successfully stored in S3 at: {s3_locations['url']}")
             
             # Store in Redshift
             print("Starting Redshift storage process...")
-            await store_transcript_in_redshift(payload, s3_location)
+            await store_transcript_in_redshift(payload, s3_locations['url'])
             print("Successfully stored in Redshift")
             
         except Exception as storage_error:
@@ -158,8 +181,9 @@ async def webhook_endpoint(request: Request):
         
         return {
             "status": "success",
-            "message": "Webhook received and stored successfully in S3 and Redshift",
-            "s3_location": s3_location
+            "message": "Webhook received and stored successfully",
+            "s3_location": s3_locations['url'],
+            "s3_uri": s3_locations['uri']
         }
     except Exception as e:
         print(f"Error processing webhook: {str(e)}")
