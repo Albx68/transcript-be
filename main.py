@@ -7,6 +7,8 @@ import json
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+import redshift_connector
+from create_table import create_and_verify_table
 
 # Load environment variables
 load_dotenv()
@@ -65,6 +67,63 @@ async def store_transcript_in_s3(payload: dict):
         print(f"Traceback: {traceback.format_exc()}")
         raise
 
+async def store_transcript_in_redshift(transcript_data: dict, s3_location: str):
+    try:
+        # Connect using redshift_connector
+        conn = redshift_connector.connect(
+            host=os.getenv('REDSHIFT_HOST'),
+            database=os.getenv('REDSHIFT_DATABASE'),
+            user=os.getenv('REDSHIFT_USER'),
+            password=os.getenv('REDSHIFT_PASSWORD'),
+            port=int(os.getenv('REDSHIFT_PORT'))
+        )
+        
+        # Extract transcript data
+        timestamp = datetime.now().isoformat()
+        transcript_text = transcript_data.get('data', {}).get('transcript', '')
+        meeting_id = transcript_data.get('data', {}).get('meeting_id', '')
+        
+        # Create cursor and execute insert
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO talent.meeting_transcripts (
+                meeting_id,
+                transcript_text,
+                s3_location,
+                created_at,
+                raw_data
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+        """, (
+            meeting_id,
+            transcript_text,
+            s3_location,
+            timestamp,
+            json.dumps(transcript_data)
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+            
+        print(f"Successfully stored transcript in Redshift")
+        return True
+        
+    except Exception as e:
+        print(f"Error storing in Redshift: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise
+
+async def create_transcript_table():
+    try:
+        await create_and_verify_table()
+    except Exception as e:
+        print(f"Error creating table: {str(e)}")
+        raise
+
 @app.post("/webhook")
 @app.get("/webhook")
 async def webhook_endpoint(request: Request):
@@ -82,17 +141,24 @@ async def webhook_endpoint(request: Request):
         payload = await request.json()
         print(f"Received payload: {payload}")
         
+        # Store in S3 first
         print("Starting S3 storage process...")
         try:
             s3_location = await store_transcript_in_s3(payload)
-            print(f"Successfully stored at: {s3_location}")
-        except Exception as s3_error:
-            print(f"Failed to store in S3: {str(s3_error)}")
-            raise HTTPException(status_code=500, detail=f"Failed to store in S3: {str(s3_error)}")
+            print(f"Successfully stored in S3 at: {s3_location}")
+            
+            # Store in Redshift
+            print("Starting Redshift storage process...")
+            await store_transcript_in_redshift(payload, s3_location)
+            print("Successfully stored in Redshift")
+            
+        except Exception as storage_error:
+            print(f"Failed to store data: {str(storage_error)}")
+            raise HTTPException(status_code=500, detail=f"Failed to store data: {str(storage_error)}")
         
         return {
             "status": "success",
-            "message": "Webhook received and stored successfully",
+            "message": "Webhook received and stored successfully in S3 and Redshift",
             "s3_location": s3_location
         }
     except Exception as e:
@@ -105,6 +171,14 @@ async def webhook_endpoint(request: Request):
 @app.get("/")
 async def root():
     return {"message": "Webhook server is running"}
+
+@app.on_event("startup")
+async def startup_event():
+    print("Creating transcript table if it doesn't exist...")
+    try:
+        await create_transcript_table()
+    except Exception as e:
+        print(f"Error during startup: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 
