@@ -33,45 +33,62 @@ async def store_transcript_in_s3(payload: dict):
     try:
         # Generate a unique filename using timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"transcript_{timestamp}.json"
+        filename = f"transcripts/transcript_{timestamp}.json"  # Added transcripts/ prefix
+        
+        print(f"Attempting to store file: {filename}")
+        print(f"Using bucket: {BUCKET_NAME}")
         
         # Convert payload to JSON string
         json_data = json.dumps(payload, indent=2)
         
         # Upload to S3
-        s3_client.put_object(
-            Bucket=BUCKET_NAME,
-            Key=filename,
-            Body=json_data,
-            ContentType='application/json'
-        )
+        try:
+            response = s3_client.put_object(
+                Bucket=BUCKET_NAME,
+                Key=filename,
+                Body=json_data,
+                ContentType='application/json'
+            )
+            print(f"S3 upload response: {response}")
+        except Exception as s3_error:
+            print(f"S3 upload error: {str(s3_error)}")
+            raise
         
-        return f"s3://{BUCKET_NAME}/{filename}"
+        s3_location = f"s3://{BUCKET_NAME}/{filename}"
+        print(f"File stored successfully at: {s3_location}")
+        return s3_location
+        
     except Exception as e:
         print(f"Error storing in S3: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         raise
 
 @app.post("/webhook")
-@app.get("/webhook")  # Adding GET method support
+@app.get("/webhook")
 async def webhook_endpoint(request: Request):
     try:
-        # Log the request method and headers
         print(f"Received {request.method} request")
         print(f"Headers: {request.headers}")
         
-        # Handle GET requests (often used for verification)
         if request.method == "GET":
             return {
                 "status": "success",
                 "message": "Webhook endpoint verified"
             }
-            
+        
         # For POST requests, parse the payload
         payload = await request.json()
         print(f"Received payload: {payload}")
         
-        # Store the transcript in S3
-        s3_location = await store_transcript_in_s3(payload)
+        print("Starting S3 storage process...")
+        try:
+            s3_location = await store_transcript_in_s3(payload)
+            print(f"Successfully stored at: {s3_location}")
+        except Exception as s3_error:
+            print(f"Failed to store in S3: {str(s3_error)}")
+            raise HTTPException(status_code=500, detail=f"Failed to store in S3: {str(s3_error)}")
         
         return {
             "status": "success",
@@ -80,6 +97,9 @@ async def webhook_endpoint(request: Request):
         }
     except Exception as e:
         print(f"Error processing webhook: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/")
