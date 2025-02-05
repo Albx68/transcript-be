@@ -13,19 +13,19 @@ class DocumentDBService:
         collection_name = os.getenv('DOCDB_COLLECTION', 'embeddings')
         
         # Download CA certificate if it doesn't exist
-        cert_path = 'global-bundle.pem'
-        if not os.path.exists(cert_path):
-            print("Downloading DocumentDB certificate...")
-            urllib.request.urlretrieve(
-                'https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem',
-                cert_path
-            )
+        # cert_path = 'global-bundle.pem'
+        # if not os.path.exists(cert_path):
+        #     print("Downloading DocumentDB certificate...")
+        #     urllib.request.urlretrieve(
+        #         'https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem',
+        #         cert_path
+        #     )
 
         # Create connection string
         connection_string = (
             f"mongodb://root:{password}@{host}:27017/"
             f"?tls=true"
-            f"&tlsCAFile={cert_path}"
+            f"&tlsCAFile=global-bundle.pem"
             f"&replicaSet=rs0"
             f"&readPreference=secondaryPreferred"
             f"&retryWrites=false"
@@ -52,10 +52,13 @@ class DocumentDBService:
 
     async def store_embedding(self, transcript_data: Dict[str, Any], embedding: list) -> bool:
         try:
+            print('transcript_data', transcript_data)
             # Extract participant emails
             participants = transcript_data.get('participants', [])
-            participant_emails = [p.get('email') for p in participants if p.get('email')]
-            
+            owner_email = transcript_data.get('owner').get('email')  # Assuming owner's email is provided
+            participant_emails = [p.get('email') for p in participants if p.get('email') and p.get('email') != owner_email]
+            participant_email = participant_emails[0] if participant_emails else None  # New field added
+ 
             # Extract and join transcript text
             transcript_blocks = transcript_data.get('transcript', {}).get('speaker_blocks', [])
             transcript_text = ' '.join(block.get('words', '') for block in transcript_blocks)
@@ -65,11 +68,14 @@ class DocumentDBService:
                 'embedding': embedding,
                 'created_at': datetime.now(),
                 'transcript_text': transcript_text,
+                'participant_email': participant_email,
+
                 'metadata': {
                     'title': transcript_data.get('title'),
                     'start_time': transcript_data.get('start_time'),
                     'end_time': transcript_data.get('end_time'),
-                    'participant_emails': participant_emails
+                    'participant_emails': participant_emails,
+                    'owner_email': owner_email
                 }
             }
             

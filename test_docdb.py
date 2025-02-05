@@ -37,6 +37,8 @@ def test_docdb_setup():
             print(f"\nDocument {doc_count}:")
             print("Session ID:", doc.get('session_id'))
             print("Created At:", doc.get('created_at'))
+            print("Participant Email:", doc.get('participant_email'))
+            print("Owner Email:", doc.get('metadata', {}).get('owner_email'))
             print("Transcript Text:", doc.get('transcript_text')[:100] + "..." if doc.get('transcript_text') else None)
             print('1 embedding', doc.get('embedding')[0])
             print('2 embedding', doc.get('embedding')[1])
