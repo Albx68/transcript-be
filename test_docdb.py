@@ -34,9 +34,11 @@ def test_docdb_setup():
         doc_count = 0
         for doc in cursor:
             doc_count += 1
+            # print('doc', doc)
             print(f"\nDocument {doc_count}:")
             print("Session ID:", doc.get('session_id'))
             print("Created At:", doc.get('created_at'))
+            print('participants', doc.get('participant_emails'))
             print("Participant Email:", doc.get('participant_email'))
             print("Owner Email:", doc.get('metadata', {}).get('owner_email'))
             print("Transcript Text:", doc.get('transcript_text')[:100] + "..." if doc.get('transcript_text') else None)
