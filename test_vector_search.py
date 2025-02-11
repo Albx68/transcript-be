@@ -70,7 +70,7 @@ class DocumentDBClient:
             self.client.close()
             print("Connection closed")
 
-    def vector_search(self, query_text: str, collection_name: str = "transcripts", num_results: int = 5):
+    def vector_search(self, query_text: str, collection_name: str = "embeddings", num_results: int = 5):
         """
         Perform vector search using text query
         :param query_text: Text to search for
@@ -83,6 +83,8 @@ class DocumentDBClient:
 
             # Get embedding for the query text
             query_vector = self.embedding_service.get_embedding(query_text)
+            # print('query vector',query_text, query_vector)  # Debug print
+            print('vector length:', len(query_vector))      # Debug print
             
             # Perform vector search with correct schema
             results = self.db[collection_name].aggregate([
@@ -101,31 +103,54 @@ class DocumentDBClient:
                 }
             ])
             
-            return list(results)
+            return [{k: v for k, v in doc.items() if k != 'embedding'} for doc in results]
             
         except Exception as e:
             print(f"Vector search error: {str(e)}")
             raise
 
+    def check_embeddings(self, collection_name: str = "transcripts"):
+        """Debug helper to check if documents have embeddings"""
+        try:
+            # Sample one document
+            doc = self.db[collection_name].find_one()
+            print("\nSample document structure:")
+            pprint(doc)
+            
+            # Count documents with embeddings and log collection name
+            print(f"Querying collection: {collection_name}")
+            count = self.db[collection_name].count_documents({"embedding": {"$exists": True}})
+            total = self.db[collection_name].count_documents({})
+            print(f"Total documents in {collection_name}: {total}")
+            print(f"Documents with embeddings in {collection_name}: {count}")
+            # print(f"Documents with embeddings in {collection_name}: {count}/{total}")
+            
+            if doc and 'embedding' in doc:
+                print(f"Embedding vector length: {len(doc['embedding'])}")
+            
+        except Exception as e:
+            print(f"Debug error: {str(e)}")
+
 def main():
-    # Initialize client
     docdb = DocumentDBClient()
     
     try:
-        # Connect to database
         docdb.connect(database_name="transcripts")
         
-        # Example vector search
-        query = "who were the speakers?"
+        # Debug existing data
+        docdb.check_embeddings()
+        
+        # Try search
+        query = "pokemon expert"  # Simple query for testing
         results = docdb.vector_search(query)
         
         print("\nVector Search Results:")
         for doc in results:
+            print('vector search result:')
             pprint(doc)
             
     except Exception as e:
         print(f"Error: {str(e)}")
-        
     finally:
         docdb.close()
 
