@@ -92,9 +92,9 @@ with gr.Blocks(title="Document Search", theme=gr.themes.Soft()) as demo:
     # Add example queries
     gr.Examples(
         examples=[
-            "What are the symptoms of diabetes?",
-            "How to maintain a healthy diet?",
-            "What are common heart diseases?",
+            "Find conversations with experts in oauth",
+            "How does one implement lazy loading?",
+            "What is the strongest pokemon type",
         ],
         inputs=query_input,
         label="Example Queries"
