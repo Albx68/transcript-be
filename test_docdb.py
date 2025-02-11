@@ -96,14 +96,16 @@ def main():
         results = docdb.query_collection("embeddings")
         print("\nQuery Results:")
         for doc in results:
-            pprint(doc)
+            print(f"Document: {doc}")
+            if 'embedding' in doc:
+                print(f"Embedding length: {len(doc['embedding'])}")
             
         # 2. Query with filter
-        query = {"field_name": "value"}
-        filtered_results = docdb.query_collection("your_collection", query=query)
-        print("\nFiltered Results:")
-        for doc in filtered_results:
-            print(doc)
+        # query = {"field_name": "value"}
+        # filtered_results = docdb.query_collection("your_collection", query=query)
+        # print("\nFiltered Results:")
+        # for doc in filtered_results:
+        #     print(doc)
             
     except Exception as e:
         print(f"Error: {str(e)}")
