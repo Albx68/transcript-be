@@ -45,7 +45,20 @@ class DocumentDBService:
             
             # Create simple index on session_id
             self.collection.create_index('session_id', unique=True)
-            
+            # self.db.runCommand({
+            #     'createIndexes': "transcripts",
+            #     'indexes': [{
+            #         'key': { "embedding": "vector" },
+            #         'name': "embedding_hnsw_index",
+            #         'vectorOptions': {
+            #             'type': "hnsw",       # Vector search type
+            #             'dimensions': 4,      # Must match your embedding size
+            #             'similarity': "cosine",  # Choose 'euclidean', 'cosine', or 'dotProduct'
+            #             'm': 16,              # Connectivity parameter (default 16)
+            #             'efConstruction': 64   # Search quality (default 64)
+            #         }
+            #     }]
+            # });
         except Exception as e:
             print(f"Failed to connect to DocumentDB: {str(e)}")
             raise
