@@ -2,6 +2,9 @@ import gradio as gr
 import os
 from dotenv import load_dotenv
 from test_vector_search import perform_vector_search
+import random
+import time
+import itertools
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +24,27 @@ def format_datetime(dt):
     except:
         return str(dt)
 
+def get_loading_messages():
+    """Return cycling loading messages for search phases"""
+    return {
+        'init': itertools.cycle([
+            "Initializing search engine...", 
+            "Warming up the neural networks...",
+            "Preparing semantic search..."
+        ]),
+        'search': itertools.cycle([
+            "Searching through documents...",
+            "Analyzing semantic meanings...",
+            "Computing relevance scores...",
+            "Matching your query..."
+        ]),
+        'format': itertools.cycle([
+            "Formatting results...",
+            "Preparing output...",
+            "Organizing findings..."
+        ])
+    }
+
 def search_documents(query: str, progress=gr.Progress()):
     """
     Perform vector search and return formatted results
@@ -33,13 +57,30 @@ def search_documents(query: str, progress=gr.Progress()):
         if not query.strip():
             return "Please enter a search query."
             
-        progress(0.2, desc="Initializing search...")
+        loading_messages = get_loading_messages()
+        current_progress = 0.0
         
-        # Perform the vector search
-        progress(0.4, desc="Searching documents...")
+        # Animated initialization phase
+        for _ in range(3):
+            current_progress = min(0.2, current_progress + 0.07)
+            progress(current_progress, desc=next(loading_messages['init']))
+            time.sleep(0.3)
+        
+        # Animated search phase
+        search_progress_steps = [0.3, 0.4, 0.5, 0.6]
+        for step in search_progress_steps:
+            current_progress = max(current_progress, step)
+            progress(current_progress, desc=next(loading_messages['search']))
+            time.sleep(0.4)
+            
         results = perform_vector_search(query)
         
-        progress(0.8, desc="Formatting results...")
+        # Animated formatting phase
+        for _ in range(2):
+            current_progress = min(0.8, current_progress + 0.1)
+            progress(current_progress, desc=next(loading_messages['format']))
+            time.sleep(0.2)
+            
         print('gradio results:', results)
 
         # Convert results to string representation
@@ -55,7 +96,8 @@ def search_documents(query: str, progress=gr.Progress()):
                     output_lines.append(f"{key}: {value}")
             output_lines.append("=" * 50)
         
-        progress(1.0, desc="Complete!")
+        progress(1.0, desc="Search complete! 🎉")
+        time.sleep(0.5)  # Brief pause to show completion message
         
         if not output_lines:
             return "No matching documents found."
