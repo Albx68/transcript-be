@@ -132,6 +132,40 @@ class DocumentDBClient:
         except Exception as e:
             print(f"Debug error: {str(e)}")
 
+def perform_vector_search(query_text: str, num_results: int = 5):
+    """
+    Perform vector search and return formatted results
+    
+    Args:
+        query_text: Text to search for
+        num_results: Number of results to return
+    
+    Returns:
+        List of search results with scores and text
+    """
+    docdb = DocumentDBClient()
+    try:
+        docdb.connect(database_name="transcripts")
+        results = docdb.vector_search(query_text, collection_name="embeddings", num_results=num_results)
+        
+        # Format results for UI while preserving all fields
+        formatted_results = []
+        for doc in results:
+            formatted_result = {
+                'score': doc.get('score', 'N/A'),
+                'created_at': doc.get('created_at', 'N/A'),
+                'metadata': doc.get('metadata', {}),
+                'participant_email': doc.get('participant_email', 'N/A'),
+                'session_id': doc.get('session_id', 'N/A'),
+                'transcript_text': doc.get('transcript_text', 'No text available'),
+            }
+            formatted_results.append(formatted_result)
+        
+        return formatted_results
+        
+    finally:
+        docdb.close()
+
 def main():
     docdb = DocumentDBClient()
     
