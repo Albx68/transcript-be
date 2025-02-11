@@ -81,12 +81,10 @@ class DocumentDBClient:
             if not self.client:
                 raise ConnectionError("Not connected to DocumentDB")
 
-            # Get embedding for the query text
             query_vector = self.embedding_service.get_embedding(query_text)
-            # print('query vector',query_text, query_vector)  # Debug print
-            print('vector length:', len(query_vector))      # Debug print
+            print('vector length:', len(query_vector))
             
-            # Perform vector search with correct schema
+            # Enhanced vector search with score
             results = self.db[collection_name].aggregate([
                 {
                     "$search": {
@@ -95,15 +93,18 @@ class DocumentDBClient:
                             "path": "embedding",
                             "similarity": "cosine",
                             "k": num_results,
-                            # Optional parameters for different index types
-                            # "probes": 10,  # For IVFFlat index
-                            # "efSearch": 100  # For HNSW index
                         }
+                    }
+                },
+                {
+                    "$project": {
+                        "embedding": 0,  # Exclude embedding from results
+                     
                     }
                 }
             ])
-            
-            return [{k: v for k, v in doc.items() if k != 'embedding'} for doc in results]
+   
+            return list(results)  # Convert cursor to list
             
         except Exception as e:
             print(f"Vector search error: {str(e)}")
@@ -136,18 +137,16 @@ def main():
     
     try:
         docdb.connect(database_name="transcripts")
-        
-        # Debug existing data
         docdb.check_embeddings()
         
-        # Try search
-        query = "pokemon expert"  # Simple query for testing
-        results = docdb.vector_search(query)
+        # Try search with more context
+        query = "What type is effective against water type"  # More natural language query
+        results = docdb.vector_search(query, num_results=5)
         
         print("\nVector Search Results:")
         for doc in results:
-            print('vector search result:')
-            pprint(doc)
+            print(f"\nScore: {doc.get('score', 'N/A')}")  # Show similarity score
+            pprint({k:v for k,v in doc.items() if k != 'score'})
             
     except Exception as e:
         print(f"Error: {str(e)}")
