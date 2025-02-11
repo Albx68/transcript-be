@@ -3,14 +3,29 @@ import os
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from pprint import pprint
+import google.generativeai as genai
 
 # Load environment variables from .env file
 load_dotenv()
+
+class EmbeddingService:
+    def __init__(self):
+        self.model = "models/embedding-001"
+        genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+
+    def get_embedding(self, text: str) -> list:
+        response = genai.embed_content(
+            model=self.model,
+            content=text,
+            task_type="retrieval_document"
+        )
+        return response['embedding']
 
 class DocumentDBClient:
     def __init__(self):
         self.client = None
         self.db = None
+        self.embedding_service = EmbeddingService()
         
     def connect(self, database_name="your_database"):
         """Establish connection to DocumentDB"""
@@ -18,7 +33,7 @@ class DocumentDBClient:
             # Get credentials from environment variables
             username = os.getenv('DOCDB_USERNAME', 'root')
             password = os.getenv('DOCDB_PASSWORD')
-            host ="health2070-prod-docdb-cluster.cluster-cu4mn4dld2td.ap-south-1.docdb.amazonaws.com"
+            host = "health2070-prod-docdb-cluster.cluster-cu4mn4dld2td.ap-south-1.docdb.amazonaws.com"
             
             # Debug print (mask password partially)
             print("Debug values:")
@@ -55,35 +70,44 @@ class DocumentDBClient:
             self.client.close()
             print("Connection closed")
 
-    def query_collection(self, collection_name, query=None, limit=10):
+    def vector_search(self, query_text: str, collection_name: str = "transcripts", num_results: int = 5):
         """
-        Query documents from a collection
-        :param collection_name: Name of the collection to query
-        :param query: MongoDB query dict (default: None, returns all documents)
-        :param limit: Maximum number of documents to return
+        Perform vector search using text query
+        :param query_text: Text to search for
+        :param collection_name: Name of the collection to search in
+        :param num_results: Number of results to return (k)
         """
         try:
             if not self.client:
                 raise ConnectionError("Not connected to DocumentDB")
 
-            collection = self.db[collection_name]
-            query = query or {}
+            # Get embedding for the query text
+            query_vector = self.embedding_service.get_embedding(query_text)
             
-            results = collection.find(query).limit(limit)
+            # Perform vector search with correct schema
+            results = self.db[collection_name].aggregate([
+                {
+                    "$search": {
+                        "vectorSearch": {
+                            "vector": query_vector,
+                            "path": "embedding",
+                            "similarity": "cosine",
+                            "k": num_results,
+                            # Optional parameters for different index types
+                            # "probes": 10,  # For IVFFlat index
+                            # "efSearch": 100  # For HNSW index
+                        }
+                    }
+                }
+            ])
+            
             return list(results)
             
         except Exception as e:
-            print(f"Query error: {str(e)}")
+            print(f"Vector search error: {str(e)}")
             raise
 
 def main():
-    # Create .env file with these variables
-    # """
-    # DOCDB_USERNAME=your_username
-    # DOCDB_PASSWORD=your_password
-    # DOCDB_HOST=your-cluster-address.cluster-xxx.region.docdb.amazonaws.com
-    # """
-    
     # Initialize client
     docdb = DocumentDBClient()
     
@@ -91,19 +115,13 @@ def main():
         # Connect to database
         docdb.connect(database_name="transcripts")
         
-        # Example queries
-        # 1. Simple find all documents in a collection
-        results = docdb.query_collection("embeddings")
-        print("\nQuery Results:")
+        # Example vector search
+        query = "who were the speakers?"
+        results = docdb.vector_search(query)
+        
+        print("\nVector Search Results:")
         for doc in results:
             pprint(doc)
-            
-        # 2. Query with filter
-        query = {"field_name": "value"}
-        filtered_results = docdb.query_collection("your_collection", query=query)
-        print("\nFiltered Results:")
-        for doc in filtered_results:
-            print(doc)
             
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -113,3 +131,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
