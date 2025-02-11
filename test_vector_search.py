@@ -132,7 +132,7 @@ class DocumentDBClient:
         except Exception as e:
             print(f"Debug error: {str(e)}")
 
-def perform_vector_search(query_text: str, num_results: int = 5):
+def perform_vector_search(query_text: str, num_results: int = 1):
     """
     Perform vector search and return formatted results
     
@@ -152,11 +152,11 @@ def perform_vector_search(query_text: str, num_results: int = 5):
         formatted_results = []
         for doc in results:
             formatted_result = {
-                'score': doc.get('score', 'N/A'),
+                # 'score': doc.get('score', 'N/A'),
                 'created_at': doc.get('created_at', 'N/A'),
-                'metadata': doc.get('metadata', {}),
+                # 'metadata': doc.get('metadata', {}),
                 'participant_email': doc.get('participant_email', 'N/A'),
-                'session_id': doc.get('session_id', 'N/A'),
+                # 'session_id': doc.get('session_id', 'N/A'),
                 'transcript_text': doc.get('transcript_text', 'No text available'),
             }
             formatted_results.append(formatted_result)
