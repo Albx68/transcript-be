@@ -26,22 +26,21 @@ class RedshiftService:
             cursor = conn.cursor()
             
             meeting_id = transcript_data.get('session_id', '')
-            transcript_text = self._extract_transcript_text(transcript_data)
             timestamp = datetime.now().isoformat()
             
             insert_query = """
                 INSERT INTO talent.meeting_transcripts (
-                    meeting_id, transcript_text, s3_location, created_at, raw_data
-                ) VALUES (%s, %s, %s, %s, %s)
+                    meeting_id, s3_location, created_at
+                ) VALUES (%s, %s, %s)
             """
             
             values = (
                 meeting_id,
-                transcript_text,
                 s3_location,
                 timestamp,
-                json.dumps(transcript_data)
             )
+
+            print('values', values)
             
             cursor.execute(insert_query, values)
             conn.commit()
