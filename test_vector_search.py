@@ -82,6 +82,8 @@ class DocumentDBClient:
                 raise ConnectionError("Not connected to DocumentDB")
 
             query_vector = self.embedding_service.get_embedding(query_text)
+            print('embedding length:', (query_vector))
+
             print('vector length:', len(query_vector))
             
             # Enhanced vector search with score
