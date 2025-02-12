@@ -9,67 +9,67 @@ def test_webhook():
     # Current time for start_time
     current_time = datetime.utcnow()
     
-    # Sample payload matching the Pokemon meeting format
+    # Sample payload with new data but same schema
     payload = {
-    "session_id": "02BACKEND123SECURE456",
+    "session_id": "03POKEMON789BATTLE3212xx",
     "trigger": "meeting_end",
-    "title": "Enhancing API Security",
-    "start_time": "2025-02-11T14:00:00Z",
-    "end_time": "2025-02-11T14:45:00Z",
+    "title": "Pokemon Battle Strategy Discussion",
+    "start_time": "2025-02-15T10:00:00Z",
+    "end_time": "2025-02-15T10:45:00Z",
     "participants": [
         {
-            "name": "David Wright",
-            "first_name": "David",
-            "last_name": "Wright",
-            "email": "david@securetech.com"
+            "name": "Ash Ketchum",
+            "first_name": "Ash",
+            "last_name": "Ketchum",
+            "email": "ash@pokemon.com"
         },
         {
-            "name": "Eve Carter",
-            "first_name": "Eve",
-            "last_name": "Carter",
-            "email": "eve@securetech.com"
+            "name": "Misty Waters",
+            "first_name": "Misty",
+            "last_name": "Waters",
+            "email": "misty@pokemon.com"
         },
         {
-            "name": "Frank Lee",
-            "first_name": "Frank",
-            "last_name": "Lee",
-            "email": "frank@securetech.com"
+            "name": "Brock Stone",
+            "first_name": "Brock",
+            "last_name": "Stone",
+            "email": "brock@pokemon.com"
         }
     ],
     "owner": {
-        "name": "David Wright",
-        "first_name": "David",
-        "last_name": "Wright",
-        "email": "david@securetech.com"
+        "name": "Ash Ketchum",
+        "first_name": "Ash",
+        "last_name": "Ketchum",
+        "email": "ash@pokemon.com"
     },
-    "summary": "Discussing best practices to secure APIs, including authentication strategies, rate limiting, and logging.",
+    "summary": "Discussion about effective Pokemon battle strategies, type advantages, and team composition for upcoming tournaments.",
     "action_items": [
-        {"text": "Eve to implement OAuth2.0 for third-party API authentication."},
-        {"text": "Frank to research API rate-limiting strategies."}
+        {"text": "Misty to research counter-strategies against electric types."},
+        {"text": "Brock to compile a list of rock-type Pokemon weaknesses."}
     ],
     "key_questions": [
-        {"text": "Are JWTs sufficient for securing API requests?"},
-        {"text": "How do we handle failed authentication attempts efficiently?"}
+        {"text": "What are the most effective type combinations in current meta?"},
+        {"text": "How do we counter water-type Pokemon effectively?"}
     ],
     "topics": [
-        {"text": "Authentication"},
-        {"text": "Rate Limiting"},
-        {"text": "Logging"}
+        {"text": "Type Advantages"},
+        {"text": "Battle Strategy"},
+        {"text": "Team Composition"}
     ],
-    "report_url": "https://app.read.ai/analytics/meetings/APISECURITY456",
+    "report_url": "https://app.read.ai/analytics/meetings/POKEMON789",
     "chapter_summaries": [
         {
-            "title": "OAuth vs. API Key Security",
-            "description": "Comparing different authentication methods.",
+            "title": "Type Effectiveness Analysis",
+            "description": "Detailed discussion of Pokemon type advantages and disadvantages.",
             "topics": [
-                {"text": "Security risks of API keys"}
+                {"text": "Water type weaknesses"}
             ]
         },
         {
-            "title": "Handling Failed Authentication",
-            "description": "How to manage repeated login attempts safely.",
+            "title": "Team Building Strategies",
+            "description": "How to build a balanced Pokemon team.",
             "topics": [
-                {"text": "Brute force protection"}
+                {"text": "Defensive core composition"}
             ]
         }
     ],
@@ -78,38 +78,38 @@ def test_webhook():
             {
                 "start_time": 1707658800,
                 "end_time": 1707658805,
-                "speaker": {"name": "David Wright"},
-                "words": "We've had some security concerns with our API authentication."
+                "speaker": {"name": "Ash Ketchum"},
+                "words": "We need to discuss effective strategies against water-type Pokemon."
             },
             {
                 "start_time": 1707658806,
                 "end_time": 1707658810,
-                "speaker": {"name": "Eve Carter"},
-                "words": "I suggest we move to OAuth2.0. It's more secure than API keys."
+                "speaker": {"name": "Misty Waters"},
+                "words": "Electric and grass types are strong against water, but we need to consider dual-typing."
             },
             {
                 "start_time": 1707658811,
                 "end_time": 1707658815,
-                "speaker": {"name": "Frank Lee"},
-                "words": "That makes sense. What about rate limiting to prevent abuse?"
+                "speaker": {"name": "Brock Stone"},
+                "words": "Rock types are weak to water, but they're strong against electric types."
             },
             {
                 "start_time": 1707658816,
                 "end_time": 1707658820,
-                "speaker": {"name": "David Wright"},
-                "words": "Yes, we should enforce rate limiting per user to prevent DoS attacks."
+                "speaker": {"name": "Ash Ketchum"},
+                "words": "We should focus on Pokemon that can learn grass moves but aren't grass type."
             },
             {
                 "start_time": 1707658821,
                 "end_time": 1707658825,
-                "speaker": {"name": "Eve Carter"},
-                "words": "I'll start implementing OAuth, and Frank, you can look into rate-limiting strategies."
+                "speaker": {"name": "Misty Waters"},
+                "words": "I'll research more about electric type counters, and Brock can look into rock type vulnerabilities."
             }
         ],
         "speakers": [
-            {"name": "David Wright"},
-            {"name": "Eve Carter"},
-            {"name": "Frank Lee"}
+            {"name": "Ash Ketchum"},
+            {"name": "Misty Waters"},
+            {"name": "Brock Stone"}
         ]
     }
 }
